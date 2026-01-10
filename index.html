@@ -1,8 +1,8 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Cálculos de diabetes</title>
+  <title>Herramientas de Farmacia</title>
 
   <style>
     body {
@@ -91,7 +91,8 @@
       cursor: pointer;
     }
 
-    #estadoDoc {
+    #estadoDoc, #resultado, #resultadoSuma,
+    #resultadoInsulina, #resultadoFechaGeneral {
       margin-top: 15px;
       font-weight: bold;
     }
@@ -122,8 +123,7 @@
   <!-- FECHAS -->
   <div id="solapaFechas" class="tab-content">
     <h2>Días desde último pedido</h2>
-    <input type="text" id="fechaInput" placeholder="dd/mm/aaaa">
-    <br>
+    <input type="text" id="fechaInput" placeholder="dd/mm/aaaa"><br>
     <button onclick="compararFechas()">Comparar</button>
     <button onclick="sumarDias()">Sumar 82 días</button>
     <div id="resultado"></div>
@@ -138,8 +138,7 @@
       <option value="tresiba">TRESIBA</option>
       <option value="otra">OTRA</option>
     </select><br>
-    <input type="number" id="valorInsulina" placeholder="Dosis diaria">
-    <br>
+    <input type="number" id="valorInsulina" placeholder="Dosis diaria"><br>
     <button onclick="calcularInsulina()">Calcular</button>
     <div id="resultadoInsulina"></div>
   </div>
@@ -178,6 +177,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
 <script>
+/* UI */
 function mostrarSolapa(e,id){
   document.querySelectorAll('.tab-content').forEach(d=>d.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -190,31 +190,68 @@ function toggleAccordion(id){
   c.style.display=c.style.display==="flex"?"none":"flex";
 }
 
-/* FECHAS */
+/* FECHAS DIABETES */
 function compararFechas(){
-  const f=document.getElementById("fechaInput").value.split("/");
-  if(f.length!==3)return;
-  const d=new Date(f[2],f[1]-1,f[0]);
-  const hoy=new Date();
-  const dias=Math.floor((hoy-d)/(1000*60*60*24));
-  document.getElementById("resultado").textContent=`Pasaron ${dias} días.`;
+  const v=document.getElementById("fechaInput").value;
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return;
+  const [d,m,a]=v.split("/").map(Number);
+  const f=new Date(a,m-1,d);
+  const h=new Date();
+  const dias=Math.floor((h-f)/(1000*60*60*24));
+  document.getElementById("resultado").textContent=`Han pasado ${dias} días.`;
 }
 
 function sumarDias(){
-  const f=document.getElementById("fechaInput").value.split("/");
-  const d=new Date(f[2],f[1]-1,f[0]);
-  d.setDate(d.getDate()+82);
-  document.getElementById("resultadoSuma").textContent=`Nueva fecha: ${d.toLocaleDateString()}`;
+  const v=document.getElementById("fechaInput").value;
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return;
+  const [d,m,a]=v.split("/").map(Number);
+  const f=new Date(a,m-1,d);
+  f.setDate(f.getDate()+82);
+  document.getElementById("resultadoSuma").textContent=
+    `Nueva fecha: ${String(f.getDate()).padStart(2,"0")}/${String(f.getMonth()+1).padStart(2,"0")}/${f.getFullYear()}`;
 }
 
 /* INSULINA */
 function calcularInsulina(){
-  const v=document.getElementById("valorInsulina").value;
-  const t=document.getElementById("tipoInsulina").value;
-  const div={toujeo:1350,tresiba:1800,otra:1500}[t];
-  const cajas=Math.ceil((v*90)/div);
-  document.getElementById("resultadoInsulina").textContent=`Cajas trimestrales: ${cajas}`;
+  const valor=parseFloat(document.getElementById("valorInsulina").value);
+  const tipo=document.getElementById("tipoInsulina").value;
+  const res=document.getElementById("resultadoInsulina");
+
+  if(isNaN(valor)||valor<=0){
+    res.textContent="Ingrese una dosis válida.";
+    return;
+  }
+
+  const div={toujeo:1350,tresiba:1800,otra:1500}[tipo];
+  const total=valor*90;
+  const calc=total/div;
+
+  res.textContent=
+    `Resultado:
+${total} ÷ ${div} = ${calc.toFixed(2)} cajas
+(aprox. ${Math.ceil(calc)} cajas por trimestre)`;
 }
+
+/* GENERAL */
+function procesarFechaGeneral(op){
+  const f=document.getElementById("fechaGeneral").value;
+  const d=document.getElementById("diasGeneral").value;
+  const r=document.getElementById("resultadoFechaGeneral");
+
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(f)||!d){
+    r.textContent="Complete correctamente los campos.";
+    return;
+  }
+
+  const [dd,mm,aa]=f.split("/").map(Number);
+  const fecha=new Date(aa,mm-1,dd);
+  fecha.setDate(fecha.getDate()+(op==="sumar"?parseInt(d):-parseInt(d)));
+
+  r.textContent=`Resultado: ${String(fecha.getDate()).padStart(2,"0")}/${String(fecha.getMonth()+1).padStart(2,"0")}/${fecha.getFullYear()}`;
+}
+
+function sumarFechaGeneral(){ procesarFechaGeneral("sumar"); }
+function restarFechaGeneral(){ procesarFechaGeneral("restar"); }
 
 /* DOCUMENTOS */
 async function procesarDocumentos(){
@@ -224,7 +261,7 @@ async function procesarDocumentos(){
   const estado=document.getElementById("estadoDoc");
 
   if(!nombre||files.length===0){
-    estado.textContent="Complete todos los campos";
+    estado.textContent="Complete todos los campos.";
     return;
   }
 
@@ -272,10 +309,12 @@ async function procesarDocumentos(){
   a.download=`${nombre}.zip`;
   a.click();
 
-  estado.textContent="ZIP generado correctamente";
+  estado.textContent="ZIP generado correctamente.";
 }
 </script>
 
 </body>
 </html>
+
+
 

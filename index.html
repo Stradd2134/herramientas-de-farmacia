@@ -10,9 +10,33 @@
 <style>
 body{font-family:Arial;padding:20px}
 .lista{margin-top:15px}
-.item{border:1px solid #ccc;padding:8px;margin-bottom:5px;display:flex;align-items:center;gap:5px}
-.item input{flex:1}
+.item{
+  border:1px solid #ccc;
+  padding:8px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.thumb{
+  width:60px;
+  height:60px;
+  border:1px solid #aaa;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#f5f5f5;
+}
+.thumb img{
+  max-width:100%;
+  max-height:100%;
+}
+input[type="text"]{flex:1}
 button{cursor:pointer}
+.pdf-icon{
+  font-size:32px;
+  color:#c00;
+}
 </style>
 </head>
 
@@ -26,14 +50,8 @@ button{cursor:pointer}
 <hr>
 
 <h3>Salida</h3>
-<label>
-  <input type="radio" name="salida" value="pdf" checked>
-  Un solo PDF
-</label><br>
-<label>
-  <input type="radio" name="salida" value="zip">
-  ZIP con PDFs separados
-</label>
+<label><input type="radio" name="salida" value="pdf" checked> Un solo PDF</label><br>
+<label><input type="radio" name="salida" value="zip"> ZIP con PDFs separados</label>
 
 <br><br>
 <button onclick="generarSalida()">Generar</button>
@@ -41,66 +59,60 @@ button{cursor:pointer}
 <p id="estado"></p>
 
 <script>
-let archivosCargados = [];
+let archivosCargados=[];
 
-document.getElementById("archivos").addEventListener("change", e=>{
+document.getElementById("archivos").addEventListener("change",e=>{
   for(const file of e.target.files){
     archivosCargados.push({
       file,
-      nombre: file.name.replace(/\.[^/.]+$/, "")
+      nombre:file.name.replace(/\.[^/.]+$/,""),
+      url:file.type.startsWith("image")?URL.createObjectURL(file):null
     });
   }
   render();
 });
 
 function render(){
-  const cont = document.getElementById("lista");
-  cont.innerHTML = "";
+  const cont=document.getElementById("lista");
+  cont.innerHTML="";
 
   archivosCargados.forEach((obj,i)=>{
-    const div = document.createElement("div");
+    const div=document.createElement("div");
     div.className="item";
 
-    div.innerHTML = `
-      <input value="${obj.nombre}" onchange="renombrar(${i},this.value)">
+    const thumb=document.createElement("div");
+    thumb.className="thumb";
+
+    if(obj.url){
+      const img=document.createElement("img");
+      img.src=obj.url;
+      thumb.appendChild(img);
+    }else{
+      thumb.innerHTML='<span class="pdf-icon">📄</span>';
+    }
+
+    div.appendChild(thumb);
+
+    div.innerHTML+=`
+      <input type="text" value="${obj.nombre}" onchange="renombrar(${i},this.value)">
       <button onclick="subir(${i})">↑</button>
       <button onclick="bajar(${i})">↓</button>
       <button onclick="eliminar(${i})">✕</button>
     `;
+
     cont.appendChild(div);
   });
 }
 
-function renombrar(i,val){
-  archivosCargados[i].nombre = val;
-}
-
-function subir(i){
-  if(i===0)return;
-  [archivosCargados[i-1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i-1]];
-  render();
-}
-
-function bajar(i){
-  if(i===archivosCargados.length-1)return;
-  [archivosCargados[i+1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i+1]];
-  render();
-}
-
-function eliminar(i){
-  archivosCargados.splice(i,1);
-  render();
-}
+function renombrar(i,val){archivosCargados[i].nombre=val;}
+function subir(i){if(i===0)return;[archivosCargados[i-1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i-1]];render();}
+function bajar(i){if(i===archivosCargados.length-1)return;[archivosCargados[i+1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i+1]];render();}
+function eliminar(i){if(archivosCargados[i].url)URL.revokeObjectURL(archivosCargados[i].url);archivosCargados.splice(i,1);render();}
 
 async function generarSalida(){
-  const tipo=document.querySelector('input[name="salida"]:checked').value;
   document.getElementById("estado").textContent="Procesando…";
-
-  if(tipo==="pdf"){
-    await generarPDF();
-  }else{
-    await generarZIP();
-  }
+  const tipo=document.querySelector('input[name="salida"]:checked').value;
+  tipo==="pdf"?await generarPDF():await generarZIP();
 }
 
 async function generarPDF(){
@@ -109,20 +121,16 @@ async function generarPDF(){
   for(const obj of archivosCargados){
     const f=obj.file;
     if(f.type.includes("pdf")){
-      const bytes=await f.arrayBuffer();
-      const pdf=await PDFLib.PDFDocument.load(bytes);
+      const pdf=await PDFLib.PDFDocument.load(await f.arrayBuffer());
       const pages=await pdfFinal.copyPages(pdf,pdf.getPageIndices());
       pages.forEach(p=>pdfFinal.addPage(p));
-    }else if(f.type.startsWith("image")){
+    }else{
       const imgBytes=await f.arrayBuffer();
-      const img=f.type.includes("png")
-        ?await pdfFinal.embedPng(imgBytes)
-        :await pdfFinal.embedJpg(imgBytes);
+      const img=f.type.includes("png")?await pdfFinal.embedPng(imgBytes):await pdfFinal.embedJpg(imgBytes);
       const page=pdfFinal.addPage([img.width,img.height]);
       page.drawImage(img,{x:0,y:0,width:img.width,height:img.height});
     }
   }
-
   descargar(new Blob([await pdfFinal.save()],{type:"application/pdf"}),"documentacion.pdf");
 }
 
@@ -133,18 +141,15 @@ async function generarZIP(){
     const f=obj.file;
     if(f.type.includes("pdf")){
       zip.file(obj.nombre+".pdf",await f.arrayBuffer());
-    }else if(f.type.startsWith("image")){
+    }else{
       const pdf=await PDFLib.PDFDocument.create();
       const imgBytes=await f.arrayBuffer();
-      const img=f.type.includes("png")
-        ?await pdf.embedPng(imgBytes)
-        :await pdf.embedJpg(imgBytes);
+      const img=f.type.includes("png")?await pdf.embedPng(imgBytes):await pdf.embedJpg(imgBytes);
       const page=pdf.addPage([img.width,img.height]);
       page.drawImage(img,{x:0,y:0,width:img.width,height:img.height});
       zip.file(obj.nombre+".pdf",await pdf.save());
     }
   }
-
   descargar(await zip.generateAsync({type:"blob"}),"documentacion.zip");
 }
 
@@ -160,6 +165,8 @@ function descargar(blob,nombre){
 
 </body>
 </html>
+
+
 
 
 

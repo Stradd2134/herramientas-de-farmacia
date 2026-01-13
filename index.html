@@ -1,170 +1,324 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Generador de Documentación PDF</title>
+<meta charset="UTF-8" />
+<title>Herramientas de Farmacia</title>
 
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <style>
-body{font-family:Arial;padding:20px}
-.lista{margin-top:15px}
-.item{
-  border:1px solid #ccc;
-  padding:8px;
-  margin-bottom:8px;
-  display:flex;
-  align-items:center;
-  gap:8px;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #001f3f;
+  color: white;
+  display: flex;
 }
-.thumb{
-  width:60px;
-  height:60px;
-  border:1px solid #aaa;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:#f5f5f5;
+
+.sidebar {
+  width: 220px;
+  background-color: #002b5c;
+  padding: 20px;
+  height: 100vh;
+  box-sizing: border-box;
 }
-.thumb img{
-  max-width:100%;
-  max-height:100%;
+
+.accordion {
+  background-color: #004080;
+  color: white;
+  cursor: pointer;
+  padding: 12px;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+  margin-bottom: 10px;
+  border-radius: 4px;
 }
-input[type="text"]{flex:1}
-button{cursor:pointer}
-.pdf-icon{
-  font-size:32px;
-  color:#c00;
+
+.accordion-content {
+  display: none;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.tab {
+  background-color: #0059b3;
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: left;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.tab.active {
+  background-color: #00cfff;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 40px;
+}
+
+.tab-content {
+  display: none;
+  background-color: #003366;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+input, select, button {
+  font-size: 16px;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 4px;
+  border: none;
+}
+
+.lista .item {
+  background: #fff;
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+}
+
+.thumb {
+  width: 60px;
+  height: 60px;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.pdf-icon {
+  font-size: 32px;
+  color: #c00;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Generador de Documentos – Diabetes</h2>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
+  <div id="diabetes" class="accordion-content">
+    <button class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</button>
+    <button class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</button>
+    <button class="tab" onclick="mostrarSolapa(event,'solapaDocs')">Documentación</button>
+  </div>
+
+  <button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
+  <div id="general" class="accordion-content">
+    <button class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+<h1 style="text-align:center">HERRAMIENTAS DE FARMACIA</h1>
+
+<!-- FECHAS -->
+<div id="solapaFechas" class="tab-content">
+<h2>Días desde último pedido</h2>
+<input id="fechaInput" placeholder="dd/mm/aaaa">
+<br>
+<button onclick="compararFechas()">Comparar</button>
+<button onclick="sumarDias()">Sumar 82 días</button>
+<div id="resultado"></div>
+<div id="resultadoSuma"></div>
+</div>
+
+<!-- INSULINA -->
+<div id="solapaInsulina" class="tab-content">
+<h2>Cálculo de Insulina</h2>
+<select id="tipoInsulina">
+  <option value="toujeo">TOUJEO</option>
+  <option value="tresiba">TRESIBA</option>
+  <option value="otra">OTRA</option>
+</select><br>
+<input id="valorInsulina" type="number" placeholder="Dosis diaria">
+<br>
+<button onclick="calcularInsulina()">Calcular</button>
+<div id="resultadoInsulina"></div>
+</div>
+
+<!-- DOCUMENTACIÓN -->
+<div id="solapaDocs" class="tab-content">
+<h2>Documentación del Afiliado</h2>
 
 <input type="file" id="archivos" multiple accept=".pdf,image/*">
 <div class="lista" id="lista"></div>
 
 <hr>
 
-<h3>Salida</h3>
 <label><input type="radio" name="salida" value="pdf" checked> Un solo PDF</label><br>
-<label><input type="radio" name="salida" value="zip"> ZIP con PDFs separados</label>
+<label><input type="radio" name="salida" value="zip"> ZIP separado</label>
 
 <br><br>
 <button onclick="generarSalida()">Generar</button>
-
 <p id="estado"></p>
+</div>
+
+<!-- GENERAL -->
+<div id="solapaGeneral" class="tab-content">
+<h2>Calculadora General</h2>
+<input id="fechaGeneral" placeholder="dd/mm/aaaa">
+<input id="diasGeneral" type="number" placeholder="Días">
+<br>
+<button onclick="sumarFechaGeneral()">Sumar</button>
+<button onclick="restarFechaGeneral()">Restar</button>
+<div id="resultadoFechaGeneral"></div>
+</div>
+
+</div>
 
 <script>
+function toggleAccordion(id){
+  const el=document.getElementById(id);
+  el.style.display=el.style.display==="flex"?"none":"flex";
+}
+
+function mostrarSolapa(e,id){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+}
+
+/* ==== CALCULADORAS (SIN CAMBIOS FUNCIONALES) ==== */
+
+function compararFechas(){
+  const f=document.getElementById("fechaInput").value.split("/");
+  const d=new Date(f[2],f[1]-1,f[0]);
+  const hoy=new Date();
+  const dias=Math.floor((hoy-d)/86400000);
+  document.getElementById("resultado").textContent=`Han pasado ${dias} días.`;
+}
+
+function sumarDias(){
+  const f=document.getElementById("fechaInput").value.split("/");
+  const d=new Date(f[2],f[1]-1,f[0]);
+  d.setDate(d.getDate()+82);
+  document.getElementById("resultadoSuma").textContent=d.toLocaleDateString();
+}
+
+function calcularInsulina(){
+  const v=Number(valorInsulina.value);
+  const m={toujeo:1350,tresiba:1800,otra:1500}[tipoInsulina.value];
+  const total=v*90;
+  document.getElementById("resultadoInsulina").textContent=
+    `Resultado: ${Math.ceil(total/m)} cajas aprox.`;
+}
+
+function procesarFechaGeneral(op){
+  const f=fechaGeneral.value.split("/");
+  const d=new Date(f[2],f[1]-1,f[0]);
+  d.setDate(d.getDate()+(op==="sumar"?+diasGeneral.value:-diasGeneral.value));
+  resultadoFechaGeneral.textContent=d.toLocaleDateString();
+}
+function sumarFechaGeneral(){procesarFechaGeneral("sumar")}
+function restarFechaGeneral(){procesarFechaGeneral("restar")}
+
+/* ==== DOCUMENTACIÓN ==== */
+
 let archivosCargados=[];
 
-document.getElementById("archivos").addEventListener("change",e=>{
-  for(const file of e.target.files){
+archivos.addEventListener("change",e=>{
+  for(const f of e.target.files){
     archivosCargados.push({
-      file,
-      nombre:file.name.replace(/\.[^/.]+$/,""),
-      url:file.type.startsWith("image")?URL.createObjectURL(file):null
+      file:f,
+      nombre:f.name.replace(/\.[^/.]+$/,""),
+      url:f.type.startsWith("image")?URL.createObjectURL(f):null
     });
   }
   render();
 });
 
 function render(){
-  const cont=document.getElementById("lista");
-  cont.innerHTML="";
-
-  archivosCargados.forEach((obj,i)=>{
-    const div=document.createElement("div");
-    div.className="item";
-
-    const thumb=document.createElement("div");
-    thumb.className="thumb";
-
-    if(obj.url){
-      const img=document.createElement("img");
-      img.src=obj.url;
-      thumb.appendChild(img);
-    }else{
-      thumb.innerHTML='<span class="pdf-icon">📄</span>';
-    }
-
-    div.appendChild(thumb);
-
-    div.innerHTML+=`
-      <input type="text" value="${obj.nombre}" onchange="renombrar(${i},this.value)">
+  lista.innerHTML="";
+  archivosCargados.forEach((o,i)=>{
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=`
+      <div class="thumb">${o.url?`<img src="${o.url}">`:`<span class="pdf-icon">📄</span>`}</div>
+      <input value="${o.nombre}" onchange="archivosCargados[${i}].nombre=this.value">
       <button onclick="subir(${i})">↑</button>
       <button onclick="bajar(${i})">↓</button>
-      <button onclick="eliminar(${i})">✕</button>
-    `;
-
-    cont.appendChild(div);
+      <button onclick="eliminar(${i})">✕</button>`;
+    lista.appendChild(d);
   });
 }
 
-function renombrar(i,val){archivosCargados[i].nombre=val;}
-function subir(i){if(i===0)return;[archivosCargados[i-1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i-1]];render();}
-function bajar(i){if(i===archivosCargados.length-1)return;[archivosCargados[i+1],archivosCargados[i]]=[archivosCargados[i],archivosCargados[i+1]];render();}
-function eliminar(i){if(archivosCargados[i].url)URL.revokeObjectURL(archivosCargados[i].url);archivosCargados.splice(i,1);render();}
+function subir(i){if(i>0)[archivosCargados[i],archivosCargados[i-1]]=[archivosCargados[i-1],archivosCargados[i]],render();}
+function bajar(i){if(i<archivosCargados.length-1)[archivosCargados[i],archivosCargados[i+1]]=[archivosCargados[i+1],archivosCargados[i]],render();}
+function eliminar(i){archivosCargados.splice(i,1);render();}
 
 async function generarSalida(){
-  document.getElementById("estado").textContent="Procesando…";
-  const tipo=document.querySelector('input[name="salida"]:checked').value;
-  tipo==="pdf"?await generarPDF():await generarZIP();
+  estado.textContent="Procesando...";
+  document.querySelector('input[name="salida"]:checked').value==="pdf"?await generarPDF():await generarZIP();
 }
 
 async function generarPDF(){
-  const pdfFinal=await PDFLib.PDFDocument.create();
-
-  for(const obj of archivosCargados){
-    const f=obj.file;
-    if(f.type.includes("pdf")){
-      const pdf=await PDFLib.PDFDocument.load(await f.arrayBuffer());
-      const pages=await pdfFinal.copyPages(pdf,pdf.getPageIndices());
-      pages.forEach(p=>pdfFinal.addPage(p));
+  const pdf=await PDFLib.PDFDocument.create();
+  for(const o of archivosCargados){
+    if(o.file.type.includes("pdf")){
+      const p=await PDFLib.PDFDocument.load(await o.file.arrayBuffer());
+      const pages=await pdf.copyPages(p,p.getPageIndices());
+      pages.forEach(pg=>pdf.addPage(pg));
     }else{
-      const imgBytes=await f.arrayBuffer();
-      const img=f.type.includes("png")?await pdfFinal.embedPng(imgBytes):await pdfFinal.embedJpg(imgBytes);
-      const page=pdfFinal.addPage([img.width,img.height]);
+      const img=o.file.type.includes("png")?await pdf.embedPng(await o.file.arrayBuffer()):await pdf.embedJpg(await o.file.arrayBuffer());
+      const page=pdf.addPage([img.width,img.height]);
       page.drawImage(img,{x:0,y:0,width:img.width,height:img.height});
     }
   }
-  descargar(new Blob([await pdfFinal.save()],{type:"application/pdf"}),"documentacion.pdf");
+  descargar(await pdf.save(),"documentacion.pdf");
 }
 
 async function generarZIP(){
   const zip=new JSZip();
-
-  for(const obj of archivosCargados){
-    const f=obj.file;
-    if(f.type.includes("pdf")){
-      zip.file(obj.nombre+".pdf",await f.arrayBuffer());
+  for(const o of archivosCargados){
+    if(o.file.type.includes("pdf")){
+      zip.file(o.nombre+".pdf",await o.file.arrayBuffer());
     }else{
       const pdf=await PDFLib.PDFDocument.create();
-      const imgBytes=await f.arrayBuffer();
-      const img=f.type.includes("png")?await pdf.embedPng(imgBytes):await pdf.embedJpg(imgBytes);
-      const page=pdf.addPage([img.width,img.height]);
-      page.drawImage(img,{x:0,y:0,width:img.width,height:img.height});
-      zip.file(obj.nombre+".pdf",await pdf.save());
+      const img=o.file.type.includes("png")?await pdf.embedPng(await o.file.arrayBuffer()):await pdf.embedJpg(await o.file.arrayBuffer());
+      const p=pdf.addPage([img.width,img.height]);
+      p.drawImage(img,{x:0,y:0,width:img.width,height:img.height});
+      zip.file(o.nombre+".pdf",await pdf.save());
     }
   }
   descargar(await zip.generateAsync({type:"blob"}),"documentacion.zip");
 }
 
-function descargar(blob,nombre){
+function descargar(data,n){
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=nombre;
+  a.href=URL.createObjectURL(new Blob([data]));
+  a.download=n;
   a.click();
-  URL.revokeObjectURL(a.href);
-  document.getElementById("estado").textContent="Listo.";
+  estado.textContent="Listo.";
 }
 </script>
-
 </body>
 </html>
+
+
 
 
 

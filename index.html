@@ -219,13 +219,34 @@ function sumarDias(){
   document.getElementById("resultadoSuma").textContent=d.toLocaleDateString();
 }
 
-function calcularInsulina(){
-  const v=Number(valorInsulina.value);
-  const m={toujeo:1350,tresiba:1800,otra:1500}[tipoInsulina.value];
-  const total=v*90;
-  document.getElementById("resultadoInsulina").textContent=
-    `Resultado: ${Math.ceil(total/m)} cajas aprox.`;
+function calcularInsulina() {
+  const valor = parseFloat(document.getElementById("valorInsulina").value);
+  const tipo = document.getElementById("tipoInsulina").value;
+  const resultado = document.getElementById("resultadoInsulina");
+
+  if (isNaN(valor) || valor <= 0) {
+    resultado.textContent = "Ingrese un valor válido.";
+    return;
+  }
+
+  const valoresInsulina = {
+    toujeo: 1350,
+    tresiba: 1800,
+    otra: 1500
+  };
+
+  const divisor = valoresInsulina[tipo];
+  const totalUnidades = valor * 90;
+  const calculoExacto = totalUnidades / divisor;
+  const calculoRedondeado = Math.ceil(calculoExacto);
+
+  resultado.innerHTML = `
+    Resultado:<br>
+    ${totalUnidades} ÷ ${divisor} = ${calculoExacto.toFixed(2)} cajas<br>
+    <strong>Aproximadamente ${calculoRedondeado} cajas por trimestre</strong>
+  `;
 }
+
 
 function procesarFechaGeneral(op){
   const f=fechaGeneral.value.split("/");
@@ -317,6 +338,7 @@ function descargar(data,n){
 </script>
 </body>
 </html>
+
 
 
 

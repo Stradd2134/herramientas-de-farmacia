@@ -119,16 +119,20 @@ input, select, button {
 <div class="sidebar">
   <button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
   <div id="diabetes" class="accordion-content">
-    <button class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</button>
-    <button class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</button>
-    <button class="tab" onclick="mostrarSolapa(event,'solapaDocs')">Documentación</button>
-  </div>
+  <button class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</button>
+  <button class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</button>
+</div>
+
+
 
   <button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
   <div id="general" class="accordion-content">
-    <button class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</button>
-  </div>
+  <button class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</button>
+  <button class="tab" onclick="mostrarSolapa(event,'solapaDocs')">Documentación</button>
 </div>
+  </div>
+
+
 
 <!-- MAIN -->
 <div class="main-content">
@@ -338,6 +342,7 @@ function descargar(data,n){
 </script>
 </body>
 </html>
+
 
 
 

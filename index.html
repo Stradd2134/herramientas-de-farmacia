@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <title>Herramientas de Farmacia</title>
 
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+</script>
+
+<!-- PDF-lib -->
 <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 
 <style>
@@ -77,75 +84,63 @@ input, button, select {
 .pdf-thumb {
   display: block;
   margin-bottom: 5px;
+  border: 1px solid #00cfff;
 }
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
+  <button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
+  <div id="diabetes" class="accordion-content">
+    <div class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</div>
+    <div class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</div>
+  </div>
 
-<button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
-<div id="diabetes" class="accordion-content">
-  <div class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</div>
-  <div class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</div>
+  <button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
+  <div id="general" class="accordion-content">
+    <div class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</div>
+    <div class="tab" onclick="mostrarSolapa(event,'solapaDocumentacion')">Documentación</div>
+  </div>
 </div>
 
-<button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
-<div id="general" class="accordion-content">
-  <div class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</div>
-  <div class="tab" onclick="mostrarSolapa(event,'solapaDocumentacion')">Documentación</div>
-</div>
-
-</div>
-
-<!-- MAIN -->
 <div class="main-content">
 <h1 style="text-align:center;">HERRAMIENTAS DE FARMACIA</h1>
 
-<!-- FECHAS -->
 <div id="solapaFechas" class="tab-content">
-<h2>Consultar días desde último pedido</h2>
-<input id="fechaInput" placeholder="dd/mm/aaaa">
-<button onclick="compararFechas()">Calcular</button>
-<button onclick="sumarDias()">Sumar 82 días</button>
-<div id="resultado"></div>
-<div id="resultadoSuma"></div>
+  <input id="fechaInput" placeholder="dd/mm/aaaa">
+  <button onclick="compararFechas()">Calcular</button>
+  <button onclick="sumarDias()">Sumar 82 días</button>
+  <div id="resultado"></div>
+  <div id="resultadoSuma"></div>
 </div>
 
-<!-- INSULINA -->
 <div id="solapaInsulina" class="tab-content">
-<h2>Cálculo de Insulina</h2>
-<select id="tipoInsulina">
-<option value="toujeo">TOUJEO</option>
-<option value="tresiba">TRESIBA</option>
-<option value="otra">OTRA</option>
-</select>
-<input id="valorInsulina" type="number" placeholder="Dosis diaria">
-<button onclick="calcularInsulina()">Calcular</button>
-<div id="resultadoInsulina"></div>
+  <select id="tipoInsulina">
+    <option value="toujeo">TOUJEO</option>
+    <option value="tresiba">TRESIBA</option>
+    <option value="otra">OTRA</option>
+  </select>
+  <input id="valorInsulina" type="number" placeholder="Dosis diaria">
+  <button onclick="calcularInsulina()">Calcular</button>
+  <div id="resultadoInsulina"></div>
 </div>
 
-<!-- GENERAL -->
 <div id="solapaGeneral" class="tab-content">
-<h2>Calculadora de Fechas</h2>
-<input id="fechaGeneral" placeholder="dd/mm/aaaa">
-<input id="diasGeneral" type="number" placeholder="Cantidad de días">
-<button onclick="sumarFechaGeneral()">Sumar</button>
-<button onclick="restarFechaGeneral()">Restar</button>
-<div id="resultadoFechaGeneral"></div>
+  <input id="fechaGeneral" placeholder="dd/mm/aaaa">
+  <input id="diasGeneral" type="number" placeholder="Cantidad de días">
+  <button onclick="sumarFechaGeneral()">Sumar</button>
+  <button onclick="restarFechaGeneral()">Restar</button>
+  <div id="resultadoFechaGeneral"></div>
 </div>
 
-<!-- DOCUMENTACIÓN -->
 <div id="solapaDocumentacion" class="tab-content">
-<h2>Herramientas PDF</h2>
-
-<input type="file" id="pdfInput" accept="application/pdf">
-<div id="pdfPages"></div>
-<button onclick="generarPDFEditado()">Generar PDF editado</button>
+  <h2>Herramientas PDF</h2>
+  <input type="file" id="pdfInput" accept="application/pdf">
+  <div id="pdfPages"></div>
+  <button onclick="generarPDFEditado()">Generar PDF editado</button>
 </div>
-
 </div>
 
 <script>
@@ -162,53 +157,47 @@ function mostrarSolapa(e,id){
 
 /* INSULINA */
 function calcularInsulina(){
-  const valor=parseFloat(valorInsulina.value);
-  const tipo=tipoInsulina.value;
+  const v=parseFloat(valorInsulina.value);
   const map={toujeo:1350,tresiba:1800,otra:1500};
-  if(!valor||valor<=0){resultadoInsulina.textContent="Valor inválido";return;}
-  const total=valor*90;
-  const exacto=(total/map[tipo]).toFixed(2);
-  const red=Math.ceil(total/map[tipo]);
+  if(!v||v<=0){resultadoInsulina.textContent="Valor inválido";return;}
+  const total=v*90;
+  const exacto=(total/map[tipoInsulina.value]).toFixed(2);
+  const red=Math.ceil(total/map[tipoInsulina.value]);
   resultadoInsulina.textContent=
-    `Resultado: ${total} ÷ ${map[tipo]} = ${exacto} cajas (aprox. ${red} cajas)`;
+    `Resultado: ${total} ÷ ${map[tipoInsulina.value]} = ${exacto} cajas (aprox. ${red})`;
 }
 
 /* FECHAS */
 function compararFechas(){
   const [d,m,a]=fechaInput.value.split("/");
   const f=new Date(a,m-1,d);
-  const hoy=new Date();
-  const dias=Math.floor((hoy-f)/86400000);
-  resultado.textContent=`Han pasado ${dias} días.`;
+  resultado.textContent=`Han pasado ${Math.floor((new Date()-f)/86400000)} días.`;
 }
 function sumarDias(){
   const [d,m,a]=fechaInput.value.split("/");
   const f=new Date(a,m-1,d);
   f.setDate(f.getDate()+82);
-  resultadoSuma.textContent=`Nueva fecha: ${f.toLocaleDateString()}`;
+  resultadoSuma.textContent=f.toLocaleDateString();
 }
 
 /* GENERAL */
 function procesarFechaGeneral(op){
   const [d,m,a]=fechaGeneral.value.split("/");
   const f=new Date(a,m-1,d);
-  const dias=parseInt(diasGeneral.value);
-  f.setDate(f.getDate()+(op==="sumar"?dias:-dias));
+  f.setDate(f.getDate()+(op==="sumar"?+diasGeneral.value:-diasGeneral.value));
   resultadoFechaGeneral.textContent=f.toLocaleDateString();
 }
 function sumarFechaGeneral(){procesarFechaGeneral("sumar")}
 function restarFechaGeneral(){procesarFechaGeneral("restar")}
 
 /* PDF */
-let pdfJS,paginas=[],archivo,scrollPos=0;
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+let pdfDoc,paginas=[],archivo,scrollPos=0;
 
 pdfInput.onchange=async e=>{
   archivo=e.target.files[0];
   const buf=await archivo.arrayBuffer();
-  pdfJS=await pdfjsLib.getDocument({data:buf}).promise;
-  paginas=[...Array(pdfJS.numPages).keys()];
+  pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
+  paginas=[...Array(pdfDoc.numPages).keys()];
   render();
 };
 
@@ -216,22 +205,26 @@ async function render(){
   scrollPos=pdfPages.scrollTop;
   pdfPages.innerHTML="";
   for(let i=0;i<paginas.length;i++){
+    const page=await pdfDoc.getPage(paginas[i]+1);
+    const viewport=page.getViewport({scale:0.3});
+    const canvas=document.createElement("canvas");
+    canvas.className="pdf-thumb";
+    canvas.width=viewport.width;
+    canvas.height=viewport.height;
+    await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
+
     const div=document.createElement("div");
     div.className="pdf-page";
-    const canvas=document.createElement("canvas");
-    const page=await pdfJS.getPage(paginas[i]+1);
-    const v=page.getViewport({scale:0.25});
-    canvas.width=v.width;canvas.height=v.height;
-    await page.render({canvasContext:canvas.getContext("2d"),viewport:v}).promise;
     div.append(canvas);
-    div.innerHTML+=`<div>Página ${paginas[i]+1}</div>`;
-    div.innerHTML+=`<button onclick="mover(${i},-1)">↑</button>
-                    <button onclick="mover(${i},1)">↓</button>
-                    <button onclick="borrar(${i})">Eliminar</button>`;
+    div.innerHTML+=`<div>Página ${paginas[i]+1}</div>
+    <button onclick="mover(${i},-1)">↑</button>
+    <button onclick="mover(${i},1)">↓</button>
+    <button onclick="borrar(${i})">Eliminar</button>`;
     pdfPages.append(div);
   }
   pdfPages.scrollTop=scrollPos;
 }
+
 function mover(i,d){
   const j=i+d;if(j<0||j>=paginas.length)return;
   [paginas[i],paginas[j]]=[paginas[j],paginas[i]];
@@ -241,6 +234,7 @@ function borrar(i){
   paginas.splice(i,1);
   render();
 }
+
 async function generarPDFEditado(){
   const buf=await archivo.arrayBuffer();
   const orig=await PDFLib.PDFDocument.load(buf);
@@ -259,6 +253,7 @@ async function generarPDFEditado(){
 
 </body>
 </html>
+
 
 
 

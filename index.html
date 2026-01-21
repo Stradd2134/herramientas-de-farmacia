@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Herramientas de Documentación</title>
+<title>Herramientas Diabetes – IOSFA</title>
 
+<!-- LIBRERÍAS -->
 <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
@@ -11,59 +12,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
-body { font-family: Arial; background:#f5f5f5; padding:20px }
-h2 { margin-top:0 }
+body { font-family: Arial; background:#f4f6f8; margin:0; padding:0 }
+header { background:#003366; color:white; padding:10px 20px }
+nav { background:#e6e6e6; display:flex }
+nav button { padding:10px 20px; border:none; background:none; cursor:pointer }
+nav button.active { background:white; font-weight:bold }
+section { display:none; padding:20px }
+section.active { display:block }
 
+/* DOCUMENTACIÓN */
 #preview { display:flex; flex-wrap:wrap; gap:10px }
-.item {
-  background:#fff;
-  border:1px solid #ccc;
-  padding:8px;
-  width:150px;
-  text-align:center;
-}
-.item img { width:100%; height:auto; border:1px solid #ddd }
+.item { background:#fff; border:1px solid #ccc; padding:8px; width:150px; text-align:center }
+.item img { width:100%; border:1px solid #ddd }
 .item input { width:100%; margin-top:5px }
-button { margin-top:10px }
+
+/* BOTONES */
+button.action { margin-top:10px; padding:8px 15px }
 </style>
 </head>
-
 <body>
 
-<h2>📁 Documentación – Generador PDF</h2>
+<header>
+<h2>Sistema Diabetes – Herramientas Internas</h2>
+</header>
 
-<input type="file" id="fileInput" multiple accept="application/pdf,image/*">
-<br><br>
+<nav>
+<button class="active" onclick="showTab('general')">General</button>
+<button onclick="showTab('diabetes')">Diabetes</button>
+</nav>
 
+<!-- GENERAL -->
+<section id="general" class="active">
+<h3>📁 Documentación</h3>
+
+<input type="file" id="fileInput" multiple accept="application/pdf,image/*"><br><br>
 <div id="preview"></div>
 
 <br>
-<label>
-  <input type="radio" name="output" value="pdf" checked>
-  Un solo PDF
-</label>
-<label>
-  <input type="radio" name="output" value="zip">
-  ZIP con archivos separados
-</label>
+<label><input type="radio" name="output" value="pdf" checked> Un solo PDF</label>
+<label><input type="radio" name="output" value="zip"> ZIP separado</label>
 
 <br><br>
-<button onclick="generar()">📄 Generar</button>
+<button class="action" onclick="generarPDF()">Generar</button>
+</section>
+
+<!-- DIABETES -->
+<section id="diabetes">
+<h3>🧮 Calculadora Diabetes</h3>
+
+<label>Unidades diarias: <input id="uDia" type="number"></label><br><br>
+<label>Contenido caja (unidades): <input id="uCaja" type="number" value="300"></label><br><br>
+<label>Cajas entregadas: <input id="cajas" type="number"></label><br><br>
+
+<button class="action" onclick="calcular()">Calcular</button>
+
+<p id="resultado"></p>
+</section>
 
 <script>
+/* NAVEGACIÓN */
+function showTab(id) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* CALCULADORA */
+function calcular() {
+  const uDia = +document.getElementById('uDia').value;
+  const uCaja = +document.getElementById('uCaja').value;
+  const cajas = +document.getElementById('cajas').value;
+
+  const total = uCaja * cajas;
+  const dias = total / uDia;
+  const redondeo = Math.floor(dias);
+
+  document.getElementById('resultado').innerHTML =
+    `Duración exacta: <b>${dias.toFixed(2)}</b> días<br>` +
+    `Duración aproximada: <b>${redondeo}</b> días`;
+}
+
+/* DOCUMENTACIÓN PDF */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+const preview = document.getElementById('preview');
 const filesData = [];
-const preview = document.getElementById("preview");
 
-document.getElementById("fileInput").addEventListener("change", async e => {
+document.getElementById('fileInput').addEventListener('change', async e => {
   for (const file of e.target.files) {
-    if (file.type === "application/pdf") {
-      await cargarPDF(file);
-    } else if (file.type.startsWith("image/")) {
-      cargarImagen(file);
-    }
+    if (file.type === 'application/pdf') await cargarPDF(file);
+    else cargarImagen(file);
   }
 });
 
@@ -74,14 +114,11 @@ async function cargarPDF(file) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const viewport = page.getViewport({ scale: 1.2 });
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-
     await page.render({ canvasContext: ctx, viewport }).promise;
-
     agregarItem(canvas.toDataURL(), file, i);
   }
 }
@@ -93,84 +130,53 @@ function cargarImagen(file) {
 }
 
 function agregarItem(src, file, page) {
-  const div = document.createElement("div");
-  div.className = "item";
-
-  div.innerHTML = `
-    <img src="${src}">
-    <input value="${file.name.replace(/\.[^/.]+$/, "")}">
-  `;
-
+  const div = document.createElement('div');
+  div.className = 'item';
+  div.innerHTML = `<img src="${src}"><input value="${file.name.replace(/\.[^/.]+$/, '')}">`;
   preview.appendChild(div);
-
-  filesData.push({
-    file,
-    page,
-    input: div.querySelector("input")
-  });
+  filesData.push({ file, page, input: div.querySelector('input') });
 }
 
 new Sortable(preview, { animation: 150 });
 
-async function generar() {
-  const tipo = document.querySelector("input[name=output]:checked").value;
+async function generarPDF() {
+  const tipo = document.querySelector('input[name=output]:checked').value;
 
-  if (tipo === "pdf") {
+  if (tipo === 'pdf') {
     const pdfFinal = await PDFLib.PDFDocument.create();
 
     for (const item of filesData) {
-      if (item.file.type === "application/pdf") {
+      if (item.file.type === 'application/pdf') {
         const bytes = await item.file.arrayBuffer();
-        const pdfOrigen = await PDFLib.PDFDocument.load(bytes);
-
-        const pages = await pdfFinal.copyPages(
-          pdfOrigen,
-          [item.page - 1]
-        );
-        pdfFinal.addPage(pages[0]);
-
+        const src = await PDFLib.PDFDocument.load(bytes);
+        const [page] = await pdfFinal.copyPages(src, [item.page - 1]);
+        pdfFinal.addPage(page);
       } else {
-        const imgBytes = await item.file.arrayBuffer();
-        const img = item.file.type === "image/jpeg"
-          ? await pdfFinal.embedJpg(imgBytes)
-          : await pdfFinal.embedPng(imgBytes);
-
+        const bytes = await item.file.arrayBuffer();
+        const img = item.file.type === 'image/jpeg'
+          ? await pdfFinal.embedJpg(bytes)
+          : await pdfFinal.embedPng(bytes);
         const page = pdfFinal.addPage([img.width, img.height]);
         page.drawImage(img, { x:0, y:0, width:img.width, height:img.height });
       }
     }
 
-    const pdfBytes = await pdfFinal.save();
-    saveAs(new Blob([pdfBytes], { type:"application/pdf" }), "documentacion.pdf");
+    saveAs(new Blob([await pdfFinal.save()], { type:'application/pdf' }), 'documentacion.pdf');
 
   } else {
     const zip = new JSZip();
-
     for (const item of filesData) {
-      if (item.file.type === "application/pdf") {
-        zip.file(item.input.value + ".pdf", await item.file.arrayBuffer());
-      } else {
-        const pdf = await PDFLib.PDFDocument.create();
-        const bytes = await item.file.arrayBuffer();
-        const img = item.file.type === "image/jpeg"
-          ? await pdf.embedJpg(bytes)
-          : await pdf.embedPng(bytes);
-
-        const page = pdf.addPage([img.width, img.height]);
-        page.drawImage(img, { x:0, y:0, width:img.width, height:img.height });
-
-        zip.file(item.input.value + ".pdf", await pdf.save());
-      }
+      zip.file(item.input.value + '.pdf', await item.file.arrayBuffer());
     }
-
-    const zipBlob = await zip.generateAsync({ type:"blob" });
-    saveAs(zipBlob, "documentacion.zip");
+    saveAs(await zip.generateAsync({ type:'blob' }), 'documentacion.zip');
   }
 }
 </script>
 
 </body>
 </html>
+
+
 
 
 

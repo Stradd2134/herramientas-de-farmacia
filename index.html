@@ -1,185 +1,277 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Herramientas Diabetes – IOSFA</title>
+<meta charset="UTF-8" />
+<title>Herramientas de Farmacia</title>
 
-<!-- LIBRERÍAS -->
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { font-family: Arial; background:#f4f6f8; margin:0; padding:0 }
-header { background:#003366; color:white; padding:10px 20px }
-nav { background:#e6e6e6; display:flex }
-nav button { padding:10px 20px; border:none; background:none; cursor:pointer }
-nav button.active { background:white; font-weight:bold }
-section { display:none; padding:20px }
-section.active { display:block }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #001f3f;
+  color: white;
+  display: flex;
+}
 
-/* DOCUMENTACIÓN */
-#preview { display:flex; flex-wrap:wrap; gap:10px }
-.item { background:#fff; border:1px solid #ccc; padding:8px; width:150px; text-align:center }
-.item img { width:100%; border:1px solid #ddd }
-.item input { width:100%; margin-top:5px }
+.sidebar {
+  width: 220px;
+  background-color: #002b5c;
+  padding: 20px;
+  height: 100vh;
+}
 
-/* BOTONES */
-button.action { margin-top:10px; padding:8px 15px }
+.accordion {
+  background-color: #004080;
+  color: white;
+  cursor: pointer;
+  padding: 12px;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.accordion-content {
+  display: none;
+  flex-direction: column;
+}
+
+.tab {
+  background-color: #0059b3;
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background-color: #00cfff;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 40px;
+}
+
+.tab-content {
+  display: none;
+  background-color: #003366;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.page {
+  display: inline-block;
+  margin: 6px;
+  text-align: center;
+}
+
+.page canvas, .page img {
+  width: 110px;
+  border: 1px solid #ccc;
+}
 </style>
 </head>
+
 <body>
 
-<header>
-<h2>Sistema Diabetes – Herramientas Internas</h2>
-</header>
+<div class="sidebar">
+  <button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
+  <div id="diabetes" class="accordion-content">
+    <div class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</div>
+    <div class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</div>
+  </div>
 
-<nav>
-<button class="active" onclick="showTab('general')">General</button>
-<button onclick="showTab('diabetes')">Diabetes</button>
-</nav>
+  <button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
+  <div id="general" class="accordion-content">
+    <div class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</div>
+    <div class="tab" onclick="mostrarSolapa(event,'solapaDocumentacion')">Documentación</div>
+  </div>
+</div>
 
-<!-- GENERAL -->
-<section id="general" class="active">
-<h3>📁 Documentación</h3>
+<div class="main-content">
+<h1>HERRAMIENTAS DE FARMACIA</h1>
 
-<input type="file" id="fileInput" multiple accept="application/pdf,image/*"><br><br>
-<div id="preview"></div>
+<div id="solapaFechas" class="tab-content">
+  <input id="fechaInput" placeholder="dd/mm/aaaa">
+  <button onclick="compararFechas()">Calcular</button>
+  <div id="resultado"></div>
+</div>
 
-<br>
-<label><input type="radio" name="output" value="pdf" checked> Un solo PDF</label>
-<label><input type="radio" name="output" value="zip"> ZIP separado</label>
+<div id="solapaInsulina" class="tab-content">
+  <select id="tipoInsulina">
+    <option value="toujeo">TOUJEO</option>
+    <option value="tresiba">TRESIBA</option>
+  </select>
+  <input id="valorInsulina" type="number" placeholder="Dosis diaria">
+  <button onclick="calcularInsulina()">Calcular</button>
+  <div id="resultadoInsulina"></div>
+</div>
 
-<br><br>
-<button class="action" onclick="generarPDF()">Generar</button>
-</section>
+<div id="solapaGeneral" class="tab-content">
+  <input id="fechaGeneral" placeholder="dd/mm/aaaa">
+  <input id="diasGeneral" type="number" placeholder="días">
+  <button onclick="sumarFechaGeneral()">Sumar</button>
+  <button onclick="restarFechaGeneral()">Restar</button>
+  <div id="resultadoFechaGeneral"></div>
+</div>
 
-<!-- DIABETES -->
-<section id="diabetes">
-<h3>🧮 Calculadora Diabetes</h3>
-
-<label>Unidades diarias: <input id="uDia" type="number"></label><br><br>
-<label>Contenido caja (unidades): <input id="uCaja" type="number" value="300"></label><br><br>
-<label>Cajas entregadas: <input id="cajas" type="number"></label><br><br>
-
-<button class="action" onclick="calcular()">Calcular</button>
-
-<p id="resultado"></p>
-</section>
+<div id="solapaDocumentacion" class="tab-content">
+  <input type="file" id="fileInput" multiple accept=".pdf,image/*"><br><br>
+  <div id="listaPaginas" style="max-height:400px; overflow:auto;"></div>
+  <hr>
+  <label><input type="radio" name="salida" value="pdf" checked> PDF único</label>
+  <label><input type="radio" name="salida" value="zip"> ZIP</label><br><br>
+  <button onclick="generarSalida()">Generar</button>
+</div>
+</div>
 
 <script>
-/* NAVEGACIÓN */
-function showTab(id) {
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
-}
-
-/* CALCULADORA */
-function calcular() {
-  const uDia = +document.getElementById('uDia').value;
-  const uCaja = +document.getElementById('uCaja').value;
-  const cajas = +document.getElementById('cajas').value;
-
-  const total = uCaja * cajas;
-  const dias = total / uDia;
-  const redondeo = Math.floor(dias);
-
-  document.getElementById('resultado').innerHTML =
-    `Duración exacta: <b>${dias.toFixed(2)}</b> días<br>` +
-    `Duración aproximada: <b>${redondeo}</b> días`;
-}
-
-/* DOCUMENTACIÓN PDF */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-const preview = document.getElementById('preview');
-const filesData = [];
+let paginas = [];
 
-document.getElementById('fileInput').addEventListener('change', async e => {
+document.getElementById("fileInput").addEventListener("change", async e => {
   for (const file of e.target.files) {
-    if (file.type === 'application/pdf') await cargarPDF(file);
-    else cargarImagen(file);
-  }
-});
+    if (file.type.startsWith("image")) {
+      paginas.push({ tipo: "img", src: URL.createObjectURL(file) });
+    } else {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
 
-async function cargarPDF(file) {
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 1.2 });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    agregarItem(canvas.toDataURL(), file, i);
-  }
-}
+        // MINIATURA
+        const thumbViewport = page.getViewport({ scale: 0.25 });
+        const canvas = document.createElement("canvas");
+        canvas.width = thumbViewport.width;
+        canvas.height = thumbViewport.height;
+        await page.render({
+          canvasContext: canvas.getContext("2d"),
+          viewport: thumbViewport
+        }).promise;
 
-function cargarImagen(file) {
-  const reader = new FileReader();
-  reader.onload = e => agregarItem(e.target.result, file, null);
-  reader.readAsDataURL(file);
-}
-
-function agregarItem(src, file, page) {
-  const div = document.createElement('div');
-  div.className = 'item';
-  div.innerHTML = `<img src="${src}"><input value="${file.name.replace(/\.[^/.]+$/, '')}">`;
-  preview.appendChild(div);
-  filesData.push({ file, page, input: div.querySelector('input') });
-}
-
-new Sortable(preview, { animation: 150 });
-
-async function generarPDF() {
-  const tipo = document.querySelector('input[name=output]:checked').value;
-
-  if (tipo === 'pdf') {
-    const pdfFinal = await PDFLib.PDFDocument.create();
-
-    for (const item of filesData) {
-      if (item.file.type === 'application/pdf') {
-        const bytes = await item.file.arrayBuffer();
-        const src = await PDFLib.PDFDocument.load(bytes);
-        const [page] = await pdfFinal.copyPages(src, [item.page - 1]);
-        pdfFinal.addPage(page);
-      } else {
-        const bytes = await item.file.arrayBuffer();
-        const img = item.file.type === 'image/jpeg'
-          ? await pdfFinal.embedJpg(bytes)
-          : await pdfFinal.embedPng(bytes);
-        const page = pdfFinal.addPage([img.width, img.height]);
-        page.drawImage(img, { x:0, y:0, width:img.width, height:img.height });
+        paginas.push({
+          tipo: "pdf",
+          pdfPage: page,   // ← página real (vectorial)
+          canvas
+        });
       }
     }
-
-    saveAs(new Blob([await pdfFinal.save()], { type:'application/pdf' }), 'documentacion.pdf');
-
-  } else {
-    const zip = new JSZip();
-    for (const item of filesData) {
-      zip.file(item.input.value + '.pdf', await item.file.arrayBuffer());
-    }
-    saveAs(await zip.generateAsync({ type:'blob' }), 'documentacion.zip');
   }
+  renderPaginas();
+});
+
+function renderPaginas() {
+  const cont = document.getElementById("listaPaginas");
+  const scroll = cont.scrollTop;
+  cont.innerHTML = "";
+
+  paginas.forEach((p, i) => {
+    const d = document.createElement("div");
+    d.className = "page";
+    if (p.tipo === "img") {
+      const img = document.createElement("img");
+      img.src = p.src;
+      d.appendChild(img);
+    } else {
+      d.appendChild(p.canvas);
+    }
+
+    ["⬆","⬇","❌"].forEach((t,j)=>{
+      const b=document.createElement("button");
+      b.textContent=t;
+      b.onclick=()=>accion(i,j);
+      d.appendChild(b);
+    });
+
+    cont.appendChild(d);
+  });
+
+  cont.scrollTop = scroll;
+}
+
+function accion(i,t){
+ if(t===0 && i>0) [paginas[i-1],paginas[i]]=[paginas[i],paginas[i-1]];
+ if(t===1 && i<paginas.length-1) [paginas[i+1],paginas[i]]=[paginas[i],paginas[i+1]];
+ if(t===2) paginas.splice(i,1);
+ renderPaginas();
+}
+
+async function generarSalida(){
+ const { jsPDF } = window.jspdf;
+ const modo=document.querySelector('[name=salida]:checked').value;
+
+ if(modo==="pdf"){
+   const pdf=new jsPDF();
+   let first=true;
+
+   for(const p of paginas){
+     if(!first) pdf.addPage();
+     first=false;
+
+     if(p.tipo==="img"){
+       pdf.addImage(p.src,"JPEG",10,10,190,0);
+     } else {
+       const vp=p.pdfPage.getViewport({scale:2});
+       const c=document.createElement("canvas");
+       c.width=vp.width; c.height=vp.height;
+       await p.pdfPage.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
+       pdf.addImage(c.toDataURL("image/jpeg",1.0),"JPEG",0,0,210,297);
+     }
+   }
+   pdf.save("documentacion.pdf");
+ }
+}
+
+function calcularInsulina(){
+ const d=parseFloat(valorInsulina.value);
+ const m=tipoInsulina.value==="toujeo"?1350:1800;
+ const tot=d*90;
+ resultadoInsulina.textContent=`Exacto: ${(tot/m).toFixed(2)} | Redondeado: ${Math.ceil(tot/m)} cajas`;
+}
+
+function compararFechas(){
+ const [d,m,a]=fechaInput.value.split("/");
+ const f=new Date(a,m-1,d);
+ const dias=Math.floor((new Date()-f)/86400000);
+ resultado.textContent=`${dias} días`;
+}
+
+function sumarFechaGeneral(){proc(1)}
+function restarFechaGeneral(){proc(-1)}
+function proc(s){
+ const [d,m,a]=fechaGeneral.value.split("/");
+ const f=new Date(a,m-1,d);
+ f.setDate(f.getDate()+s*parseInt(diasGeneral.value));
+ resultadoFechaGeneral.textContent=f.toLocaleDateString();
+}
+
+function mostrarSolapa(e,id){
+ document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ e.target.classList.add('active');
+}
+
+function toggleAccordion(id){
+ const el=document.getElementById(id);
+ el.style.display=el.style.display==='flex'?'none':'flex';
 }
 </script>
-
 </body>
 </html>
-
-
-
-
-
 
 
 

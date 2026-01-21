@@ -2,215 +2,265 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Gestión Diabetes</title>
+<title>Herramientas de Farmacia</title>
 
-<!-- PDF LIB -->
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-
-<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 
 <style>
 body {
+  margin: 0;
   font-family: Arial, sans-serif;
-  background: #1e1e1e;
-  color: #fff;
+  background-color: #001f3f;
+  color: white;
+  display: flex;
+}
+.sidebar {
+  width: 220px;
+  background-color: #002b5c;
   padding: 20px;
+  height: 100vh;
 }
-
-button {
-  padding: 6px 12px;
-  margin: 4px;
+.accordion {
+  background-color: #004080;
+  color: white;
   cursor: pointer;
+  padding: 12px;
+  border: none;
+  width: 100%;
+  margin-bottom: 10px;
+  border-radius: 4px;
 }
-
+.accordion-content {
+  display: none;
+  flex-direction: column;
+}
 .tab {
-  display: inline-block;
-  margin-right: 10px;
+  background-color: #0059b3;
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
 }
-
+.tab.active {
+  background-color: #00cfff;
+}
+.main-content {
+  flex-grow: 1;
+  padding: 30px;
+}
 .tab-content {
   display: none;
-  margin-top: 20px;
+  background-color: #003366;
+  padding: 20px;
+  border-radius: 5px;
 }
-
-.active {
+.tab-content.active {
   display: block;
 }
-
-/* PDF tools */
-.pdf-page {
-  background: #ffffff;
-  color: #000;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+input, button, select {
   padding: 8px;
-  margin-bottom: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  border: none;
+}
+#pdfPages {
+  max-height: 500px;
+  overflow-y: auto;
+}
+.pdf-page {
+  background: #004080;
+  padding: 10px;
+  margin-bottom: 10px;
   border-radius: 6px;
 }
-
 .pdf-thumb {
-  width: 90px;
-  border: 1px solid #999;
+  display: block;
+  margin-bottom: 5px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Gestión de Diabetes</h1>
+<!-- SIDEBAR -->
+<div class="sidebar">
 
-<div>
-  <span class="tab" onclick="mostrar('general')">General</span>
-  <span class="tab" onclick="mostrar('diabetes')">Diabetes</span>
+<button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
+<div id="diabetes" class="accordion-content">
+  <div class="tab" onclick="mostrarSolapa(event,'solapaFechas')">Fechas</div>
+  <div class="tab" onclick="mostrarSolapa(event,'solapaInsulina')">Insulina</div>
+</div>
+
+<button class="accordion" onclick="toggleAccordion('general')">GENERAL</button>
+<div id="general" class="accordion-content">
+  <div class="tab" onclick="mostrarSolapa(event,'solapaGeneral')">Cal. Fechas</div>
+  <div class="tab" onclick="mostrarSolapa(event,'solapaDocumentacion')">Documentación</div>
+</div>
+
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+<h1 style="text-align:center;">HERRAMIENTAS DE FARMACIA</h1>
+
+<!-- FECHAS -->
+<div id="solapaFechas" class="tab-content">
+<h2>Consultar días desde último pedido</h2>
+<input id="fechaInput" placeholder="dd/mm/aaaa">
+<button onclick="compararFechas()">Calcular</button>
+<button onclick="sumarDias()">Sumar 82 días</button>
+<div id="resultado"></div>
+<div id="resultadoSuma"></div>
+</div>
+
+<!-- INSULINA -->
+<div id="solapaInsulina" class="tab-content">
+<h2>Cálculo de Insulina</h2>
+<select id="tipoInsulina">
+<option value="toujeo">TOUJEO</option>
+<option value="tresiba">TRESIBA</option>
+<option value="otra">OTRA</option>
+</select>
+<input id="valorInsulina" type="number" placeholder="Dosis diaria">
+<button onclick="calcularInsulina()">Calcular</button>
+<div id="resultadoInsulina"></div>
 </div>
 
 <!-- GENERAL -->
-<div id="general" class="tab-content active">
-
-  <h2>Documentación</h2>
-
-  <h3>Herramientas PDF</h3>
-
-  <input type="file" id="pdfInput" accept="application/pdf">
-
-  <div id="pdfPages" style="margin-top:15px"></div>
-
-  <button onclick="exportarPDFEditado()">Generar PDF corregido</button>
-  <p id="estadoPdf"></p>
-
+<div id="solapaGeneral" class="tab-content">
+<h2>Calculadora de Fechas</h2>
+<input id="fechaGeneral" placeholder="dd/mm/aaaa">
+<input id="diasGeneral" type="number" placeholder="Cantidad de días">
+<button onclick="sumarFechaGeneral()">Sumar</button>
+<button onclick="restarFechaGeneral()">Restar</button>
+<div id="resultadoFechaGeneral"></div>
 </div>
 
-<!-- DIABETES -->
-<div id="diabetes" class="tab-content">
-  <h2>Calculadoras de Diabetes</h2>
-  <p>(sin cambios)</p>
+<!-- DOCUMENTACIÓN -->
+<div id="solapaDocumentacion" class="tab-content">
+<h2>Herramientas PDF</h2>
+
+<input type="file" id="pdfInput" accept="application/pdf">
+<div id="pdfPages"></div>
+<button onclick="generarPDFEditado()">Generar PDF editado</button>
+</div>
+
 </div>
 
 <script>
-function mostrar(id) {
-  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+function toggleAccordion(id){
+  const el=document.getElementById(id);
+  el.style.display=el.style.display==="flex"?"none":"flex";
+}
+function mostrarSolapa(e,id){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  e.currentTarget.classList.add('active');
 }
 
-/* =========================
-   PDF CON MINIATURAS
-========================= */
+/* INSULINA */
+function calcularInsulina(){
+  const valor=parseFloat(valorInsulina.value);
+  const tipo=tipoInsulina.value;
+  const map={toujeo:1350,tresiba:1800,otra:1500};
+  if(!valor||valor<=0){resultadoInsulina.textContent="Valor inválido";return;}
+  const total=valor*90;
+  const exacto=(total/map[tipo]).toFixed(2);
+  const red=Math.ceil(total/map[tipo]);
+  resultadoInsulina.textContent=
+    `Resultado: ${total} ÷ ${map[tipo]} = ${exacto} cajas (aprox. ${red} cajas)`;
+}
 
+/* FECHAS */
+function compararFechas(){
+  const [d,m,a]=fechaInput.value.split("/");
+  const f=new Date(a,m-1,d);
+  const hoy=new Date();
+  const dias=Math.floor((hoy-f)/86400000);
+  resultado.textContent=`Han pasado ${dias} días.`;
+}
+function sumarDias(){
+  const [d,m,a]=fechaInput.value.split("/");
+  const f=new Date(a,m-1,d);
+  f.setDate(f.getDate()+82);
+  resultadoSuma.textContent=`Nueva fecha: ${f.toLocaleDateString()}`;
+}
+
+/* GENERAL */
+function procesarFechaGeneral(op){
+  const [d,m,a]=fechaGeneral.value.split("/");
+  const f=new Date(a,m-1,d);
+  const dias=parseInt(diasGeneral.value);
+  f.setDate(f.getDate()+(op==="sumar"?dias:-dias));
+  resultadoFechaGeneral.textContent=f.toLocaleDateString();
+}
+function sumarFechaGeneral(){procesarFechaGeneral("sumar")}
+function restarFechaGeneral(){procesarFechaGeneral("restar")}
+
+/* PDF */
+let pdfJS,paginas=[],archivo,scrollPos=0;
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-let pdfOriginal = null;
-let pdfJS = null;
-let paginasPDF = [];
+pdfInput.onchange=async e=>{
+  archivo=e.target.files[0];
+  const buf=await archivo.arrayBuffer();
+  pdfJS=await pdfjsLib.getDocument({data:buf}).promise;
+  paginas=[...Array(pdfJS.numPages).keys()];
+  render();
+};
 
-document.getElementById("pdfInput").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const bytes = await file.arrayBuffer();
-
-  pdfOriginal = await PDFLib.PDFDocument.load(bytes);
-  pdfJS = await pdfjsLib.getDocument({ data: bytes }).promise;
-
-  paginasPDF = pdfOriginal.getPageIndices();
-  renderizarPaginas();
-});
-
-async function renderizarPaginas() {
-  const cont = document.getElementById("pdfPages");
-  cont.innerHTML = "";
-
-  for (let i = 0; i < paginasPDF.length; i++) {
-    const numPagina = paginasPDF[i];
-    const div = document.createElement("div");
-    div.className = "pdf-page";
-
-    const canvas = document.createElement("canvas");
-    canvas.className = "pdf-thumb";
-
-    const page = await pdfJS.getPage(numPagina + 1);
-    const viewport = page.getViewport({ scale: 0.25 });
-    const ctx = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    div.appendChild(canvas);
-
-    const info = document.createElement("span");
-    info.textContent = `Página ${numPagina + 1}`;
-    div.appendChild(info);
-
-    const up = document.createElement("button");
-    up.textContent = "↑";
-    up.onclick = () => subirPagina(i);
-    div.appendChild(up);
-
-    const down = document.createElement("button");
-    down.textContent = "↓";
-    down.onclick = () => bajarPagina(i);
-    div.appendChild(down);
-
-    const del = document.createElement("button");
-    del.textContent = "Eliminar";
-    del.onclick = () => eliminarPagina(i);
-    div.appendChild(del);
-
-    cont.appendChild(div);
+async function render(){
+  scrollPos=pdfPages.scrollTop;
+  pdfPages.innerHTML="";
+  for(let i=0;i<paginas.length;i++){
+    const div=document.createElement("div");
+    div.className="pdf-page";
+    const canvas=document.createElement("canvas");
+    const page=await pdfJS.getPage(paginas[i]+1);
+    const v=page.getViewport({scale:0.25});
+    canvas.width=v.width;canvas.height=v.height;
+    await page.render({canvasContext:canvas.getContext("2d"),viewport:v}).promise;
+    div.append(canvas);
+    div.innerHTML+=`<div>Página ${paginas[i]+1}</div>`;
+    div.innerHTML+=`<button onclick="mover(${i},-1)">↑</button>
+                    <button onclick="mover(${i},1)">↓</button>
+                    <button onclick="borrar(${i})">Eliminar</button>`;
+    pdfPages.append(div);
   }
+  pdfPages.scrollTop=scrollPos;
 }
-
-function subirPagina(i) {
-  if (i === 0) return;
-  [paginasPDF[i - 1], paginasPDF[i]] = [paginasPDF[i], paginasPDF[i - 1]];
-  renderizarPaginas();
+function mover(i,d){
+  const j=i+d;if(j<0||j>=paginas.length)return;
+  [paginas[i],paginas[j]]=[paginas[j],paginas[i]];
+  render();
 }
-
-function bajarPagina(i) {
-  if (i === paginasPDF.length - 1) return;
-  [paginasPDF[i + 1], paginasPDF[i]] = [paginasPDF[i], paginasPDF[i + 1]];
-  renderizarPaginas();
+function borrar(i){
+  paginas.splice(i,1);
+  render();
 }
-
-function eliminarPagina(i) {
-  paginasPDF.splice(i, 1);
-  renderizarPaginas();
-}
-
-async function exportarPDFEditado() {
-  if (!pdfOriginal || paginasPDF.length === 0) {
-    alert("No hay páginas");
-    return;
+async function generarPDFEditado(){
+  const buf=await archivo.arrayBuffer();
+  const orig=await PDFLib.PDFDocument.load(buf);
+  const nuevo=await PDFLib.PDFDocument.create();
+  for(const i of paginas){
+    const [p]=await nuevo.copyPages(orig,[i]);
+    nuevo.addPage(p);
   }
-
-  document.getElementById("estadoPdf").textContent = "Generando PDF…";
-
-  const nuevoPDF = await PDFLib.PDFDocument.create();
-  const paginas = await nuevoPDF.copyPages(pdfOriginal, paginasPDF);
-  paginas.forEach(p => nuevoPDF.addPage(p));
-
-  const bytes = await nuevoPDF.save();
-  descargar(bytes, "pdf_corregido.pdf");
-
-  document.getElementById("estadoPdf").textContent = "PDF generado correctamente.";
-}
-
-function descargar(bytes, nombre) {
-  const blob = new Blob([bytes], { type: "application/pdf" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = nombre;
-  link.click();
+  const bytes=await nuevo.save();
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+  a.download="PDF_EDITADO.pdf";
+  a.click();
 }
 </script>
 
 </body>
 </html>
+
+
 
 
 

@@ -11,21 +11,19 @@
 
 <style>
 body { font-family: Arial; }
-.doc-item {
-  border: 1px solid #ccc;
+.doc {
+  border: 1px solid #aaa;
+  margin-bottom: 10px;
   padding: 10px;
-  margin: 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
-.doc-item img, .doc-item canvas {
-  width: 80px;
-  height: auto;
+.page {
+  display: inline-block;
+  margin: 5px;
+  text-align: center;
+}
+.page canvas, .page img {
+  width: 100px;
   border: 1px solid #999;
-}
-.doc-controls button {
-  margin-left: 5px;
 }
 </style>
 </head>
@@ -34,23 +32,15 @@ body { font-family: Arial; }
 
 <h3>📎 Documentación</h3>
 
-<input type="file" id="fileInput" multiple accept=".pdf,image/*">
-<div id="listaDocs"></div>
+<input type="file" multiple accept=".pdf,image/*" id="fileInput">
+<div id="docs"></div>
 
 <hr>
 
-<label>
-<input type="radio" name="salida" value="pdf" checked>
-Generar un solo PDF
-</label>
-
-<label>
-<input type="radio" name="salida" value="zip">
-Generar ZIP con archivos separados
-</label>
-
+<label><input type="radio" name="out" value="pdf" checked> PDF único</label>
+<label><input type="radio" name="out" value="zip"> ZIP separado</label>
 <br><br>
-<button onclick="generarSalida()">Generar</button>
+<button onclick="generar()">Generar</button>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -58,132 +48,116 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 let documentos = [];
 
-document.getElementById("fileInput").addEventListener("change", manejarArchivos);
-
-function manejarArchivos(e) {
+document.getElementById("fileInput").onchange = async e => {
   for (const file of e.target.files) {
-    const tipo = file.type.startsWith("image") ? "image" : "pdf";
-    const preview = URL.createObjectURL(file);
-
-    documentos.push({
-      file,
-      name: file.name,
-      type: tipo,
-      preview
-    });
+    if (file.type.startsWith("image")) {
+      documentos.push({
+        type: "image",
+        name: file.name,
+        pages: [{ img: URL.createObjectURL(file) }]
+      });
+    } else {
+      await cargarPDF(file);
+    }
   }
   render();
+};
+
+async function cargarPDF(file) {
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const pages = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 0.3 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+    pages.push({ canvas });
+  }
+
+  documentos.push({
+    type: "pdf",
+    name: file.name,
+    pages
+  });
 }
 
 function render() {
-  const cont = document.getElementById("listaDocs");
+  const cont = document.getElementById("docs");
   cont.innerHTML = "";
 
-  documentos.forEach((doc, i) => {
+  documentos.forEach((doc, d) => {
     const div = document.createElement("div");
-    div.className = "doc-item";
-
-    if (doc.type === "image") {
-      const img = document.createElement("img");
-      img.src = doc.preview;
-      div.appendChild(img);
-    } else {
-      const canvas = document.createElement("canvas");
-      canvas.width = 80;
-      canvas.height = 100;
-      div.appendChild(canvas);
-      renderPDFThumb(doc.file, canvas);
-    }
+    div.className = "doc";
 
     const input = document.createElement("input");
     input.value = doc.name;
     input.oninput = e => doc.name = e.target.value;
     div.appendChild(input);
 
-    const controls = document.createElement("div");
-    controls.className = "doc-controls";
+    doc.pages.forEach((p, i) => {
+      const pageDiv = document.createElement("div");
+      pageDiv.className = "page";
 
-    controls.innerHTML = `
-      <button onclick="mover(${i},-1)">↑</button>
-      <button onclick="mover(${i},1)">↓</button>
-      <button onclick="eliminar(${i})">🗑</button>
-    `;
+      if (doc.type === "image") {
+        const img = document.createElement("img");
+        img.src = p.img;
+        pageDiv.appendChild(img);
+      } else {
+        pageDiv.appendChild(p.canvas);
+      }
 
-    div.appendChild(controls);
+      const del = document.createElement("button");
+      del.textContent = "Eliminar";
+      del.onclick = () => {
+        doc.pages.splice(i, 1);
+        if (doc.pages.length === 0) documentos.splice(d, 1);
+        render();
+      };
+      pageDiv.appendChild(del);
+
+      div.appendChild(pageDiv);
+    });
+
     cont.appendChild(div);
   });
 }
 
-function mover(i, dir) {
-  const nuevo = i + dir;
-  if (nuevo < 0 || nuevo >= documentos.length) return;
-  [documentos[i], documentos[nuevo]] = [documentos[nuevo], documentos[i]];
-  render();
-}
-
-function eliminar(i) {
-  documentos.splice(i, 1);
-  render();
-}
-
-async function renderPDFThumb(file, canvas) {
-  const data = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 0.2 });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-}
-
-async function generarSalida() {
-  const tipo = document.querySelector('input[name="salida"]:checked').value;
+async function generar() {
+  const tipo = document.querySelector('input[name="out"]:checked').value;
 
   if (tipo === "zip") {
     const zip = new JSZip();
-    documentos.forEach(d => zip.file(d.name, d.file));
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, "documentacion.zip");
+    documentos.forEach(d => zip.file(d.name, "Contenido generado"));
+    saveAs(await zip.generateAsync({ type: "blob" }), "documentos.zip");
   } else {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
 
-    for (let i = 0; i < documentos.length; i++) {
-      const d = documentos[i];
-      if (i > 0) pdf.addPage();
+    let first = true;
+    documentos.forEach(d => {
+      d.pages.forEach(p => {
+        if (!first) pdf.addPage();
+        first = false;
 
-      if (d.type === "image") {
-        const img = await cargarImagen(d.preview);
-        pdf.addImage(img, "JPEG", 10, 10, 190, 0);
-      } else {
-        const data = await d.file.arrayBuffer();
-        const srcPdf = await pdfjsLib.getDocument({ data }).promise;
-        const page = await srcPdf.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-        pdf.addImage(canvas.toDataURL("image/jpeg"), "JPEG", 10, 10, 190, 0);
-      }
-    }
+        if (d.type === "image") {
+          pdf.addImage(p.img, "JPEG", 10, 10, 190, 0);
+        } else {
+          pdf.addImage(p.canvas.toDataURL("image/jpeg"), "JPEG", 10, 10, 190, 0);
+        }
+      });
+    });
 
     pdf.save("documentacion.pdf");
   }
-}
-
-function cargarImagen(src) {
-  return new Promise(res => {
-    const img = new Image();
-    img.onload = () => res(img);
-    img.src = src;
-  });
 }
 </script>
 
 </body>
 </html>
-
 
 
 

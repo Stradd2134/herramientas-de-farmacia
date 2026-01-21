@@ -4,15 +4,13 @@
 <meta charset="UTF-8">
 <title>Herramientas de Farmacia</title>
 
-<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 </script>
-
-<!-- PDF-lib -->
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 
 <style>
 body {
@@ -83,7 +81,7 @@ input, button, select {
 }
 .pdf-thumb {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   border: 1px solid #00cfff;
 }
 </style>
@@ -167,29 +165,6 @@ function calcularInsulina(){
     `Resultado: ${total} ÷ ${map[tipoInsulina.value]} = ${exacto} cajas (aprox. ${red})`;
 }
 
-/* FECHAS */
-function compararFechas(){
-  const [d,m,a]=fechaInput.value.split("/");
-  const f=new Date(a,m-1,d);
-  resultado.textContent=`Han pasado ${Math.floor((new Date()-f)/86400000)} días.`;
-}
-function sumarDias(){
-  const [d,m,a]=fechaInput.value.split("/");
-  const f=new Date(a,m-1,d);
-  f.setDate(f.getDate()+82);
-  resultadoSuma.textContent=f.toLocaleDateString();
-}
-
-/* GENERAL */
-function procesarFechaGeneral(op){
-  const [d,m,a]=fechaGeneral.value.split("/");
-  const f=new Date(a,m-1,d);
-  f.setDate(f.getDate()+(op==="sumar"?+diasGeneral.value:-diasGeneral.value));
-  resultadoFechaGeneral.textContent=f.toLocaleDateString();
-}
-function sumarFechaGeneral(){procesarFechaGeneral("sumar")}
-function restarFechaGeneral(){procesarFechaGeneral("restar")}
-
 /* PDF */
 let pdfDoc,paginas=[],archivo,scrollPos=0;
 
@@ -198,29 +173,47 @@ pdfInput.onchange=async e=>{
   const buf=await archivo.arrayBuffer();
   pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
   paginas=[...Array(pdfDoc.numPages).keys()];
-  render();
+  renderPDF();
 };
 
-async function render(){
+async function renderPDF(){
   scrollPos=pdfPages.scrollTop;
   pdfPages.innerHTML="";
+
   for(let i=0;i<paginas.length;i++){
     const page=await pdfDoc.getPage(paginas[i]+1);
     const viewport=page.getViewport({scale:0.3});
+
     const canvas=document.createElement("canvas");
     canvas.className="pdf-thumb";
     canvas.width=viewport.width;
     canvas.height=viewport.height;
-    await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
 
-    const div=document.createElement("div");
-    div.className="pdf-page";
-    div.append(canvas);
-    div.innerHTML+=`<div>Página ${paginas[i]+1}</div>
-    <button onclick="mover(${i},-1)">↑</button>
-    <button onclick="mover(${i},1)">↓</button>
-    <button onclick="borrar(${i})">Eliminar</button>`;
-    pdfPages.append(div);
+    await page.render({
+      canvasContext: canvas.getContext("2d"),
+      viewport
+    }).promise;
+
+    const cont=document.createElement("div");
+    cont.className="pdf-page";
+
+    const label=document.createElement("div");
+    label.textContent=`Página ${paginas[i]+1}`;
+
+    const up=document.createElement("button");
+    up.textContent="↑";
+    up.onclick=()=>mover(i,-1);
+
+    const down=document.createElement("button");
+    down.textContent="↓";
+    down.onclick=()=>mover(i,1);
+
+    const del=document.createElement("button");
+    del.textContent="Eliminar";
+    del.onclick=()=>borrar(i);
+
+    cont.append(canvas,label,up,down,del);
+    pdfPages.append(cont);
   }
   pdfPages.scrollTop=scrollPos;
 }
@@ -228,11 +221,11 @@ async function render(){
 function mover(i,d){
   const j=i+d;if(j<0||j>=paginas.length)return;
   [paginas[i],paginas[j]]=[paginas[j],paginas[i]];
-  render();
+  renderPDF();
 }
 function borrar(i){
   paginas.splice(i,1);
-  render();
+  renderPDF();
 }
 
 async function generarPDFEditado(){

@@ -13,17 +13,21 @@
 body { font-family: Arial; }
 .doc {
   border: 1px solid #aaa;
-  margin-bottom: 10px;
   padding: 10px;
+  margin-bottom: 15px;
 }
 .page {
   display: inline-block;
-  margin: 5px;
+  margin: 6px;
   text-align: center;
 }
 .page canvas, .page img {
   width: 100px;
   border: 1px solid #999;
+}
+.page button {
+  display: block;
+  margin: 2px auto;
 }
 </style>
 </head>
@@ -52,9 +56,11 @@ document.getElementById("fileInput").onchange = async e => {
   for (const file of e.target.files) {
     if (file.type.startsWith("image")) {
       documentos.push({
-        type: "image",
         name: file.name,
-        pages: [{ img: URL.createObjectURL(file) }]
+        pages: [{
+          type: "image",
+          src: URL.createObjectURL(file)
+        }]
       });
     } else {
       await cargarPDF(file);
@@ -75,14 +81,17 @@ async function cargarPDF(file) {
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-    pages.push({ canvas });
+    pages.push({ type: "pdf", canvas });
   }
 
-  documentos.push({
-    type: "pdf",
-    name: file.name,
-    pages
-  });
+  documentos.push({ name: file.name, pages });
+}
+
+function moverPagina(doc, i, dir) {
+  const nuevo = i + dir;
+  if (nuevo < 0 || nuevo >= doc.pages.length) return;
+  [doc.pages[i], doc.pages[nuevo]] = [doc.pages[nuevo], doc.pages[i]];
+  render();
 }
 
 function render() {
@@ -93,32 +102,40 @@ function render() {
     const div = document.createElement("div");
     div.className = "doc";
 
-    const input = document.createElement("input");
-    input.value = doc.name;
-    input.oninput = e => doc.name = e.target.value;
-    div.appendChild(input);
+    const name = document.createElement("input");
+    name.value = doc.name;
+    name.oninput = e => doc.name = e.target.value;
+    div.appendChild(name);
 
     doc.pages.forEach((p, i) => {
       const pageDiv = document.createElement("div");
       pageDiv.className = "page";
 
-      if (doc.type === "image") {
+      if (p.type === "image") {
         const img = document.createElement("img");
-        img.src = p.img;
+        img.src = p.src;
         pageDiv.appendChild(img);
       } else {
         pageDiv.appendChild(p.canvas);
       }
 
+      const up = document.createElement("button");
+      up.textContent = "⬆";
+      up.onclick = () => moverPagina(doc, i, -1);
+
+      const down = document.createElement("button");
+      down.textContent = "⬇";
+      down.onclick = () => moverPagina(doc, i, 1);
+
       const del = document.createElement("button");
-      del.textContent = "Eliminar";
+      del.textContent = "❌";
       del.onclick = () => {
         doc.pages.splice(i, 1);
         if (doc.pages.length === 0) documentos.splice(d, 1);
         render();
       };
-      pageDiv.appendChild(del);
 
+      pageDiv.append(up, down, del);
       div.appendChild(pageDiv);
     });
 
@@ -136,15 +153,15 @@ async function generar() {
   } else {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
-
     let first = true;
+
     documentos.forEach(d => {
       d.pages.forEach(p => {
         if (!first) pdf.addPage();
         first = false;
 
-        if (d.type === "image") {
-          pdf.addImage(p.img, "JPEG", 10, 10, 190, 0);
+        if (p.type === "image") {
+          pdf.addImage(p.src, "JPEG", 10, 10, 190, 0);
         } else {
           pdf.addImage(p.canvas.toDataURL("image/jpeg"), "JPEG", 10, 10, 190, 0);
         }
@@ -158,6 +175,7 @@ async function generar() {
 
 </body>
 </html>
+
 
 
 

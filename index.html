@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <title>Herramientas de Farmacia</title>
 
+<!-- LIBRERÍAS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -23,6 +24,7 @@ body {
   background-color: #002b5c;
   padding: 20px;
   height: 100vh;
+  box-sizing: border-box;
 }
 
 .accordion {
@@ -34,11 +36,13 @@ body {
   width: 100%;
   font-size: 16px;
   margin-bottom: 10px;
+  border-radius: 4px;
 }
 
 .accordion-content {
   display: none;
   flex-direction: column;
+  margin-bottom: 15px;
 }
 
 .tab {
@@ -46,6 +50,8 @@ body {
   margin-top: 5px;
   padding: 10px;
   border-radius: 4px;
+  text-align: left;
+  color: white;
   cursor: pointer;
 }
 
@@ -69,6 +75,11 @@ body {
   display: block;
 }
 
+input, select, button {
+  padding: 6px;
+  margin: 5px;
+}
+
 .page {
   display: inline-block;
   margin: 6px;
@@ -84,6 +95,7 @@ body {
 
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
   <button class="accordion" onclick="toggleAccordion('diabetes')">DIABETES</button>
   <div id="diabetes" class="accordion-content">
@@ -98,157 +110,175 @@ body {
   </div>
 </div>
 
+<!-- MAIN -->
 <div class="main-content">
-<h1>HERRAMIENTAS DE FARMACIA</h1>
+  <h1>HERRAMIENTAS DE FARMACIA</h1>
 
-<div id="solapaFechas" class="tab-content">
-  <input id="fechaInput" placeholder="dd/mm/aaaa">
-  <button onclick="compararFechas()">Calcular</button>
-  <div id="resultado"></div>
-</div>
+  <!-- FECHAS -->
+  <div id="solapaFechas" class="tab-content">
+    <h2>Días desde fecha</h2>
+    <input id="fechaInput" placeholder="dd/mm/aaaa">
+    <button onclick="compararFechas()">Calcular</button>
+    <div id="resultado"></div>
+  </div>
 
-<div id="solapaInsulina" class="tab-content">
-  <select id="tipoInsulina">
-    <option value="toujeo">TOUJEO</option>
-    <option value="tresiba">TRESIBA</option>
-  </select>
-  <input id="valorInsulina" type="number" placeholder="Dosis diaria">
-  <button onclick="calcularInsulina()">Calcular</button>
-  <div id="resultadoInsulina"></div>
-</div>
+  <!-- INSULINA -->
+  <div id="solapaInsulina" class="tab-content">
+    <h2>Insulina trimestral</h2>
+    <select id="tipoInsulina">
+      <option value="toujeo">TOUJEO</option>
+      <option value="tresiba">TRESIBA</option>
+    </select>
+    <input id="valorInsulina" type="number" placeholder="Dosis diaria">
+    <button onclick="calcularInsulina()">Calcular</button>
+    <div id="resultadoInsulina"></div>
+  </div>
 
-<div id="solapaGeneral" class="tab-content">
-  <input id="fechaGeneral" placeholder="dd/mm/aaaa">
-  <input id="diasGeneral" type="number" placeholder="días">
-  <button onclick="sumarFechaGeneral()">Sumar</button>
-  <button onclick="restarFechaGeneral()">Restar</button>
-  <div id="resultadoFechaGeneral"></div>
-</div>
+  <!-- GENERAL -->
+  <div id="solapaGeneral" class="tab-content">
+    <h2>Calculadora general</h2>
+    <input id="fechaGeneral" placeholder="dd/mm/aaaa">
+    <input id="diasGeneral" type="number" placeholder="días">
+    <button onclick="sumarFechaGeneral()">Sumar</button>
+    <button onclick="restarFechaGeneral()">Restar</button>
+    <div id="resultadoFechaGeneral"></div>
+  </div>
 
-<div id="solapaDocumentacion" class="tab-content">
-  <input type="file" id="fileInput" multiple accept=".pdf,image/*"><br><br>
-  <div id="listaPaginas" style="max-height:400px; overflow:auto;"></div>
-  <hr>
-  <label><input type="radio" name="salida" value="pdf" checked> PDF único</label>
-  <label><input type="radio" name="salida" value="zip"> ZIP</label><br><br>
-  <button onclick="generarSalida()">Generar</button>
-</div>
+  <!-- DOCUMENTACIÓN -->
+  <div id="solapaDocumentacion" class="tab-content">
+    <h2>📎 Documentación</h2>
+
+    <input type="file" id="fileInput" multiple accept=".pdf,image/*"><br>
+
+    <label><input type="radio" name="salida" value="pdf" checked> PDF único</label>
+    <label><input type="radio" name="salida" value="zip"> ZIP</label>
+
+    <select id="quality">
+      <option value="1">Alta</option>
+      <option value="0.8">Media</option>
+      <option value="0.6">Baja</option>
+    </select>
+
+    <div id="preview" style="max-height:420px;overflow:auto"></div>
+
+    <button onclick="generar()">Generar</button>
+  </div>
 </div>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-let paginas = [];
+let paginas=[];
 
-document.getElementById("fileInput").addEventListener("change", async e => {
-  for (const file of e.target.files) {
-    if (file.type.startsWith("image")) {
-      paginas.push({ tipo: "img", src: URL.createObjectURL(file) });
-    } else {
-      const buffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+/* UI */
+function mostrarSolapa(e,id){
+ document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ e.target.classList.add('active');
+}
+function toggleAccordion(id){
+ const el=document.getElementById(id);
+ el.style.display=el.style.display==='flex'?'none':'flex';
+}
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-
-        // MINIATURA
-        const thumbViewport = page.getViewport({ scale: 0.25 });
-        const canvas = document.createElement("canvas");
-        canvas.width = thumbViewport.width;
-        canvas.height = thumbViewport.height;
-        await page.render({
-          canvasContext: canvas.getContext("2d"),
-          viewport: thumbViewport
-        }).promise;
-
-        paginas.push({
-          tipo: "pdf",
-          pdfPage: page,   // ← página real (vectorial)
-          canvas
-        });
-      }
+/* DOCUMENTACIÓN */
+fileInput.onchange=async e=>{
+ paginas=[];
+ for(const f of e.target.files){
+  if(f.type.startsWith("image")){
+    paginas.push({tipo:"img",src:URL.createObjectURL(f),nombre:"documento",rot:0});
+  } else {
+    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+    for(let i=1;i<=pdf.numPages;i++){
+      const p=await pdf.getPage(i);
+      const v=p.getViewport({scale:1});
+      const c=document.createElement("canvas");
+      c.width=v.width;c.height=v.height;
+      await p.render({canvasContext:c.getContext("2d"),viewport:v}).promise;
+      paginas.push({tipo:"pdf",canvas:c,nombre:"documento",rot:0});
     }
   }
-  renderPaginas();
-});
+ }
+ render();
+};
 
-function renderPaginas() {
-  const cont = document.getElementById("listaPaginas");
-  const scroll = cont.scrollTop;
-  cont.innerHTML = "";
+function render(){
+ const cont=document.getElementById("preview");
+ cont.innerHTML="";
+ paginas.forEach((p,i)=>{
+  const d=document.createElement("div");d.className="page";
+  const el=p.tipo==="img"?Object.assign(new Image(),{src:p.src}):p.canvas;
+  el.style.transform=`rotate(${p.rot}deg)`;
+  d.appendChild(el);
 
-  paginas.forEach((p, i) => {
-    const d = document.createElement("div");
-    d.className = "page";
-    if (p.tipo === "img") {
-      const img = document.createElement("img");
-      img.src = p.src;
-      d.appendChild(img);
-    } else {
-      d.appendChild(p.canvas);
-    }
+  const name=document.createElement("input");
+  name.value=p.nombre;
+  name.oninput=e=>p.nombre=e.target.value;
+  d.appendChild(name);
 
-    ["⬆","⬇","❌"].forEach((t,j)=>{
-      const b=document.createElement("button");
-      b.textContent=t;
-      b.onclick=()=>accion(i,j);
-      d.appendChild(b);
-    });
-
-    cont.appendChild(d);
+  ["⤾","⬆","⬇","❌"].forEach((t,j)=>{
+    const b=document.createElement("button");
+    b.textContent=t;
+    b.onclick=()=>{
+      if(j===0)p.rot=(p.rot+90)%360;
+      if(j===1&&i>0)[paginas[i-1],paginas[i]]=[paginas[i],paginas[i-1]];
+      if(j===2&&i<paginas.length-1)[paginas[i+1],paginas[i]]=[paginas[i],paginas[i+1]];
+      if(j===3)paginas.splice(i,1);
+      render();
+    };
+    d.appendChild(b);
   });
-
-  cont.scrollTop = scroll;
+  cont.appendChild(d);
+ });
 }
 
-function accion(i,t){
- if(t===0 && i>0) [paginas[i-1],paginas[i]]=[paginas[i],paginas[i-1]];
- if(t===1 && i<paginas.length-1) [paginas[i+1],paginas[i]]=[paginas[i],paginas[i+1]];
- if(t===2) paginas.splice(i,1);
- renderPaginas();
-}
+async function generar(){
+ const {jsPDF}=window.jspdf;
+ const salida=document.querySelector('[name=salida]:checked').value;
+ const q=parseFloat(quality.value);
 
-async function generarSalida(){
- const { jsPDF } = window.jspdf;
- const modo=document.querySelector('[name=salida]:checked').value;
-
- if(modo==="pdf"){
-   const pdf=new jsPDF();
-   let first=true;
-
-   for(const p of paginas){
-     if(!first) pdf.addPage();
-     first=false;
-
-     if(p.tipo==="img"){
-       pdf.addImage(p.src,"JPEG",10,10,190,0);
-     } else {
-       const vp=p.pdfPage.getViewport({scale:2});
-       const c=document.createElement("canvas");
-       c.width=vp.width; c.height=vp.height;
-       await p.pdfPage.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
-       pdf.addImage(c.toDataURL("image/jpeg",1.0),"JPEG",0,0,210,297);
-     }
-   }
-   pdf.save("documentacion.pdf");
+ if(salida==="pdf"){
+  const pdf=new jsPDF();let first=true;
+  paginas.forEach(p=>{
+    if(!first)pdf.addPage();first=false;
+    const img=p.tipo==="img"?p.src:p.canvas.toDataURL("image/jpeg",q);
+    pdf.addImage(img,"JPEG",10,10,190,0);
+  });
+  pdf.save("documento.pdf");
+ } else {
+  const zip=new JSZip(), grupos={};
+  paginas.forEach(p=>{
+    if(!grupos[p.nombre])grupos[p.nombre]=[];
+    grupos[p.nombre].push(p);
+  });
+  for(const n in grupos){
+    const pdf=new jsPDF();let first=true;
+    grupos[n].forEach(p=>{
+      if(!first)pdf.addPage();first=false;
+      const img=p.tipo==="img"?p.src:p.canvas.toDataURL("image/jpeg",q);
+      pdf.addImage(img,"JPEG",10,10,190,0);
+    });
+    zip.file(`${n}.pdf`,pdf.output("blob"));
+  }
+  saveAs(await zip.generateAsync({type:"blob"}),"documentos.zip");
  }
 }
 
+/* CALCULADORAS */
 function calcularInsulina(){
  const d=parseFloat(valorInsulina.value);
  const m=tipoInsulina.value==="toujeo"?1350:1800;
  const tot=d*90;
- resultadoInsulina.textContent=`Exacto: ${(tot/m).toFixed(2)} | Redondeado: ${Math.ceil(tot/m)} cajas`;
+ resultadoInsulina.textContent=
+ `Exacto: ${(tot/m).toFixed(2)} | Redondeado: ${Math.ceil(tot/m)} cajas`;
 }
-
 function compararFechas(){
  const [d,m,a]=fechaInput.value.split("/");
  const f=new Date(a,m-1,d);
- const dias=Math.floor((new Date()-f)/86400000);
- resultado.textContent=`${dias} días`;
+ resultado.textContent=`${Math.floor((new Date()-f)/86400000)} días`;
 }
-
 function sumarFechaGeneral(){proc(1)}
 function restarFechaGeneral(){proc(-1)}
 function proc(s){
@@ -257,21 +287,12 @@ function proc(s){
  f.setDate(f.getDate()+s*parseInt(diasGeneral.value));
  resultadoFechaGeneral.textContent=f.toLocaleDateString();
 }
-
-function mostrarSolapa(e,id){
- document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
- document.getElementById(id).classList.add('active');
- document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
- e.target.classList.add('active');
-}
-
-function toggleAccordion(id){
- const el=document.getElementById(id);
- el.style.display=el.style.display==='flex'?'none':'flex';
-}
 </script>
+
 </body>
 </html>
+
+
 
 
 
